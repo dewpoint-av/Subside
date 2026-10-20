@@ -14,13 +14,15 @@ namespace
     juce::String gainText (float v) { return juce::String (v, 2)  + "x"; }
 
     // ---- a labelled rotary knob bound to a parameter -----------------------
-    class Knob : public juce::Component
+    class Knob : public juce::Component,
+                 private juce::AudioProcessorValueTreeState::Listener
     {
     public:
         Knob (juce::AudioProcessorValueTreeState& state,
               const juce::String& paramId,
               const juce::String& name,
               std::function<juce::String (float)> textFn)
+            : stateRef (state), param (paramId), textFn (textFn)
         {
             slider.setSliderStyle (juce::Slider::Rotary);
             slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -40,14 +42,13 @@ namespace
             attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
                 state, paramId, slider);
 
-            slider.onValueChange = [this, textFn]
-            {
-                if (textFn)
-                    valueLabel.setText (textFn (static_cast<float> (slider.getValue())),
-                                        juce::dontSendNotification);
-            };
-            slider.onValueChange();
+            stateRef.addParameterListener (param, this);
+            refreshLabel();
         }
+
+        ~Knob() override { stateRef.removeParameterListener (param, this); }
+
+        void parameterChanged (const juce::String&, float) override { refreshLabel(); }
 
         void resized() override
         {
@@ -58,6 +59,17 @@ namespace
         }
 
     private:
+        void refreshLabel()
+        {
+            if (auto* p = dynamic_cast<juce::RangedAudioParameter*> (stateRef.getParameter (param)))
+                if (textFn)
+                    valueLabel.setText (textFn (p->getNormalisableRange().convertFrom0to1 (p->getValue())),
+                                        juce::dontSendNotification);
+        }
+
+        juce::AudioProcessorValueTreeState& stateRef;
+        juce::String param;
+        std::function<juce::String (float)> textFn;
         juce::Slider slider;
         juce::Label nameLabel;
         juce::Label valueLabel;
@@ -145,7 +157,7 @@ public:
 
     void build()
     {
-        title = std::make_unique<HoloTitle> ("SUBSIDE", 32.0f, true);
+        title = std::make_unique<HoloTitle> ("SUBSIDE", 42.0f, true);
 
         subtitle.setText ("SIDECHAIN DUCKER", juce::dontSendNotification);
         subtitle.setFont (juce::Font (12.0f, juce::Font::bold));
@@ -157,7 +169,7 @@ public:
         brand.setColour (juce::Label::textColourId, SympathyLookAndFeel::accent);
         brand.setJustificationType (juce::Justification::centredRight);
 
-        footer.setText ("DEWPOINT AV", juce::dontSendNotification);
+        footer.setText (juce::String ("DEWPOINT AV  ·  v") + juce::String (JucePlugin_VersionString), juce::dontSendNotification);
         footer.setFont (monumentFont (11.0f, false));
         footer.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
         footer.setJustificationType (juce::Justification::centred);
@@ -212,7 +224,7 @@ public:
         footer.setBounds (b.removeFromBottom (18));
         b.removeFromBottom (2);
 
-        auto header = b.removeFromTop (46);
+        auto header = b.removeFromTop (58);
         title->setBounds (header.removeFromLeft (340));
         brand.setBounds (header.removeFromRight (220));
         subtitle.setBounds (header);
@@ -274,7 +286,11 @@ SubsideAudioProcessorEditor::~SubsideAudioProcessorEditor()
 
 void SubsideAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (SympathyLookAndFeel::background);
+    const auto b = getLocalBounds().toFloat();
+    g.setGradientFill (juce::ColourGradient (
+        SympathyLookAndFeel::background.brighter (0.05f), b.getCentreX(), b.getCentreY(),
+        SympathyLookAndFeel::background, b.getWidth() * 0.65f, b.getHeight() * 0.65f, true));
+    g.fillAll();
 }
 
 void SubsideAudioProcessorEditor::resized()

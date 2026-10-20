@@ -1,7 +1,7 @@
 ; Subside — Inno Setup installer
 
 #define MyAppName "Subside"
-#define MyAppVersion "1.0.3"
+#define MyAppVersion "1.0.4"
 #define MyAppPublisher "Dewpoint AV"
 #define MyAppURL "https://dewpoint.live"
 
@@ -35,6 +35,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "..\build\dist\Subside.vst3\*"; DestDir: "{commoncf}\VST3\{#MyAppName}.vst3"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\build\dist\Subside.clap"; DestDir: "{commoncf}\CLAP"; Flags: ignoreversion
+
+[InstallDelete]
+Type: filesandordirs; Name: "{commoncf}\VST3\Subside.vst3"
+Type: files; Name: "{commoncf}\CLAP\Subside.clap"
 
 [Icons]
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"

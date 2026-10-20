@@ -42,7 +42,10 @@ jobs:
           cp -R dist/Subside.vst3      payload/Library/Audio/Plug-Ins/VST3/
           cp -R dist/Subside.component payload/Library/Audio/Plug-Ins/Components/
           cp -R dist/Subside.clap      payload/Library/Audio/Plug-Ins/CLAP/
-          pkgbuild --root payload --identifier com.dewpoint.Subside --version 1.0.3 --install-location / Subside-1.0.3-mac.pkg
+          mkdir -p scripts
+          printf '#!/bin/sh\nrm -rf "/Library/Audio/Plug-Ins/VST3/Subside.vst3"\nrm -rf "/Library/Audio/Plug-Ins/Components/Subside.component"\nrm -rf "/Library/Audio/Plug-Ins/CLAP/Subside.clap"\nexit 0\n' > scripts/preinstall
+          chmod +x scripts/preinstall
+          pkgbuild --root payload --scripts scripts --identifier com.dewpoint.Subside --version 1.0.4 --install-location / Subside-1.0.4-mac.pkg
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -50,4 +53,4 @@ jobs:
           name: Subside-macOS
           path: |
             dist/**
-            Subside-1.0.3-mac.pkg
+            Subside-1.0.4-mac.pkg

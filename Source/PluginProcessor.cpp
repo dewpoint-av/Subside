@@ -245,8 +245,14 @@ void SubsideAudioProcessor::setCurvePoints (int lane, const std::vector<subside:
 {
     if (lane < 0 || lane > 1)
         return;
-    curvePoints[static_cast<size_t> (lane)] = points;
-    engine.setCurve (lane, points);
+
+    // Keep points sorted by x so index-based editing (drag) stays stable.
+    auto sorted = points;
+    std::sort (sorted.begin(), sorted.end(),
+               [] (const subside::CurvePoint& a, const subside::CurvePoint& b) { return a.x < b.x; });
+
+    curvePoints[static_cast<size_t> (lane)] = sorted;
+    engine.setCurve (lane, sorted);
     writeCurvesToState();
 }
 

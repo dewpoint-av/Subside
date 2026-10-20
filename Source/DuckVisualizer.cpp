@@ -39,11 +39,21 @@ LanePanel::LanePanel (SubsideAudioProcessor& p, int laneIndex)
     : proc (p), lane (laneIndex)
 {
     startTimerHz (60);
+
+    drawButton.setColour (juce::ToggleButton::textColourId, SympathyLookAndFeel::muted);
+    drawButton.setColour (juce::ToggleButton::tickColourId, SympathyLookAndFeel::accent);
+    addAndMakeVisible (drawButton);
+    drawButton.onClick = [this] { repaint(); };
 }
 
 LanePanel::~LanePanel()
 {
     stopTimer();
+}
+
+void LanePanel::resized()
+{
+    drawButton.setBounds (getWidth() - 62, 8, 54, 18);
 }
 
 void LanePanel::timerCallback()
@@ -79,8 +89,8 @@ void LanePanel::paint (juce::Graphics& g)
                 header.removeFromLeft (120), juce::Justification::centredLeft, false);
     g.setFont (juce::Font (10.0f, juce::Font::plain));
     g.setColour (SympathyLookAndFeel::muted);
-    g.drawText ("click + drag to draw  |  double-click to reset",
-                header, juce::Justification::centredRight, false);
+    g.drawText ("drag to reshape  ·  double-click to reset",
+                header.withTrimmedRight (62.0f), juce::Justification::centredRight, false);
 
     // Input waveform (audio lane only).
     if (isAudio)
@@ -153,35 +163,7 @@ void LanePanel::paint (juce::Graphics& g)
     g.fillEllipse (plot.getX() + phase * plot.getWidth() - 3.0f, yPh - 3.0f, 6.0f, 6.0f);
 }
 
-void LanePanel::mouseDown (const juce::MouseEvent& e)
-{
-    if (e.getNumberOfClicks() >= 2)
-    {
-        resetCurveToDefault();
-        return;
-    }
-    drawing = true;
-    pending.clear();
-    addPoint (e);
-}
-
-void LanePanel::mouseDrag (const juce::MouseEvent& e)
-{
-    if (drawing)
-        addPoint (e);
-}
-
-void LanePanel::mouseUp (const juce::MouseEvent&)
-{
-    if (drawing)
-    {
-        drawing = false;
-        if (!pending.empty())
-            proc.setCurvePoints (lane, pending);
-    }
-}
-
-void LanePanel::addPoint (const juce::MouseEvent& e)
+juce::Point<float> LanePanel::mouseToNormalised (const juce::MouseEvent& e) const
 {
     auto plot = getLocalBounds().toFloat().reduced (12.0f, 10.0f);
     plot.removeFromTop (16.0f);
@@ -190,8 +172,71 @@ void LanePanel::addPoint (const juce::MouseEvent& e)
         (e.position.x - plot.getX()) / plot.getWidth());
     const float ny = juce::jlimit (0.0f, 1.0f,
         1.0f - (e.position.y - plot.getY()) / plot.getHeight());
+    return { nx, ny };
+}
 
-    pending.push_back ({ nx, ny });
+int LanePanel::findNearestPoint (juce::Point<float> n) const
+{
+    const auto pts = proc.getCurvePoints (lane);
+    int best = -1;
+    float bestDist = 0.06f;
+    for (int i = 0; i < static_cast<int> (pts.size()); ++i)
+    {
+        const float dx = pts[static_cast<size_t> (i)].x - n.x;
+        const float dy = pts[static_cast<size_t> (i)].y - n.y;
+        const float d = std::sqrt (dx * dx + dy * dy);
+        if (d < bestDist)
+        {
+            bestDist = d;
+            best = i;
+        }
+    }
+    return best;
+}
+
+void LanePanel::mouseDown (const juce::MouseEvent& e)
+{
+    if (e.getNumberOfClicks() >= 2)
+    {
+        resetCurveToDefault();
+        return;
+    }
+
+    const auto n = mouseToNormalised (e);
+
+    if (drawButton.getToggleState())
+    {
+        // Draw mode: each single click appends a point.
+        auto pts = proc.getCurvePoints (lane);
+        pts.push_back ({ n.x, n.y });
+        proc.setCurvePoints (lane, pts);
+        draggedPoint = -1;
+    }
+    else
+    {
+        // Edit mode: select the nearest point to drag.
+        draggedPoint = findNearestPoint (n);
+    }
+}
+
+void LanePanel::mouseDrag (const juce::MouseEvent& e)
+{
+    if (draggedPoint >= 0)
+    {
+        const auto n = mouseToNormalised (e);
+        auto pts = proc.getCurvePoints (lane);
+        if (draggedPoint < static_cast<int> (pts.size()))
+        {
+            pts[static_cast<size_t> (draggedPoint)].x = n.x;
+            pts[static_cast<size_t> (draggedPoint)].y = n.y;
+            proc.setCurvePoints (lane, pts);
+        }
+    }
+}
+
+void LanePanel::mouseUp (const juce::MouseEvent&)
+{
+    draggedPoint = -1;
 }
 
 void LanePanel::resetCurveToDefault()
@@ -318,7 +363,7 @@ void MainVisualizer::paint (juce::Graphics& g)
 
     // Particles.
     // Constellations: join nearby particles with faint blue links.
-    const float linkDist  = 55.0f;
+    const float linkDist  = 65.0f;
     const float linkDist2 = linkDist * linkDist;
     for (size_t i = 0; i < particles.size(); ++i)
     {
@@ -329,7 +374,7 @@ void MainVisualizer::paint (juce::Graphics& g)
             const float d2 = dx * dx + dy * dy;
             if (d2 < linkDist2)
             {
-                const float a = (1.0f - std::sqrt (d2) / linkDist) * 0.30f;
+                const float a = (1.0f - std::sqrt (d2) / linkDist) * 0.38f;
                 g.setColour (juce::Colour (0xff6ea8fe).withAlpha (a));
                 g.drawLine (particles[i].x, particles[i].y, particles[j].x, particles[j].y, 0.8f);
             }
