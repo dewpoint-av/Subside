@@ -1,0 +1,274 @@
+#include "PluginEditor.h"
+
+#include "DuckVisualizer.h"
+
+#include <cmath>
+#include <functional>
+
+namespace
+{
+    juce::String pctText  (float v) { return juce::String (v * 100.0f, 0) + " %"; }
+    juce::String secText  (float v) { return juce::String (v, 2)  + " s"; }
+    juce::String msText   (float v) { return juce::String (v * 1000.0f, 0) + " ms"; }
+    juce::String gainText (float v) { return juce::String (v, 2)  + "x"; }
+
+    // ---- a labelled rotary knob bound to a parameter -----------------------
+    class Knob : public juce::Component
+    {
+    public:
+        Knob (juce::AudioProcessorValueTreeState& state,
+              const juce::String& paramId,
+              const juce::String& name,
+              std::function<juce::String (float)> textFn)
+        {
+            slider.setSliderStyle (juce::Slider::Rotary);
+            slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+            addAndMakeVisible (slider);
+
+            nameLabel.setText (name, juce::dontSendNotification);
+            nameLabel.setFont (juce::Font (11.0f, juce::Font::plain));
+            nameLabel.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
+            nameLabel.setJustificationType (juce::Justification::centred);
+            addAndMakeVisible (nameLabel);
+
+            valueLabel.setFont (juce::Font (11.0f, juce::Font::bold));
+            valueLabel.setColour (juce::Label::textColourId, SympathyLookAndFeel::text);
+            valueLabel.setJustificationType (juce::Justification::centred);
+            addAndMakeVisible (valueLabel);
+
+            attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+                state, paramId, slider);
+
+            slider.onValueChange = [this, textFn]
+            {
+                if (textFn)
+                    valueLabel.setText (textFn (static_cast<float> (slider.getValue())),
+                                        juce::dontSendNotification);
+            };
+            slider.onValueChange();
+        }
+
+        void resized() override
+        {
+            auto b = getLocalBounds();
+            nameLabel.setBounds (b.removeFromTop (18));
+            valueLabel.setBounds (b.removeFromBottom (18));
+            slider.setBounds (b);
+        }
+
+    private:
+        juce::Slider slider;
+        juce::Label nameLabel;
+        juce::Label valueLabel;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+    };
+
+    // ---- a titled panel that draws its own background ----------------------
+    class Panel : public juce::Component
+    {
+    public:
+        explicit Panel (const juce::String& title)
+        {
+            titleLabel.setText (title, juce::dontSendNotification);
+            titleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
+            titleLabel.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
+            titleLabel.setJustificationType (juce::Justification::centred);
+            addAndMakeVisible (titleLabel);
+        }
+
+        void paint (juce::Graphics& g) override
+        {
+            SympathyLookAndFeel::drawPanelBackground (g, getLocalBounds());
+        }
+
+        void resized() override
+        {
+            titleLabel.setBounds (0, 8, getWidth(), 18);
+        }
+
+        juce::Label titleLabel;
+    };
+
+    void layoutKnobs (std::vector<std::unique_ptr<Knob>>& knobs, int cols,
+                      juce::Rectangle<int> area, int gapX, int gapY)
+    {
+        if (knobs.empty())
+            return;
+
+        const int rows = static_cast<int> (std::ceil (knobs.size() / static_cast<double> (cols)));
+        const int cw = (area.getWidth()  - gapX * (cols - 1)) / cols;
+        const int ch = (area.getHeight() - gapY * (rows - 1)) / rows;
+        const int knobH = juce::jmin (ch, 96);
+
+        int idx = 0;
+        for (int r = 0; r < rows; ++r)
+        {
+            for (int c = 0; c < cols && idx < static_cast<int> (knobs.size()); ++c, ++idx)
+            {
+                const int x = area.getX() + c * (cw + gapX);
+                const int y = area.getY() + r * (ch + gapY);
+                knobs[static_cast<size_t> (idx)]->setBounds (x, y + (ch - knobH) / 2, cw, knobH);
+            }
+        }
+    }
+}
+
+// ===========================================================================
+class SubsideAudioProcessorEditor::Impl
+{
+public:
+    explicit Impl (SubsideAudioProcessor& proc)
+        : processor (proc)
+    {
+        build();
+    }
+
+    SubsideAudioProcessor& processor;
+
+    juce::Label title;
+    juce::Label subtitle;
+    juce::Label brand;
+
+    std::unique_ptr<MainVisualizer> mainVis;
+    std::unique_ptr<LanePanel> audioLane;
+    std::unique_ptr<LanePanel> midiLane;
+
+    std::unique_ptr<Panel> triggerPanel;
+    std::unique_ptr<Panel> bandsPanel;
+    std::unique_ptr<Panel> globalPanel;
+
+    std::vector<std::unique_ptr<Knob>> triggerKnobs;
+    std::vector<std::unique_ptr<Knob>> bandKnobs;
+    std::vector<std::unique_ptr<Knob>> globalKnobs;
+
+    void build()
+    {
+        title.setText ("SUBSIDE", juce::dontSendNotification);
+        title.setFont (juce::Font (30.0f, juce::Font::bold));
+        title.setColour (juce::Label::textColourId, SympathyLookAndFeel::accent);
+        title.setJustificationType (juce::Justification::centredLeft);
+
+        subtitle.setText ("SIDECHAIN DUCKER", juce::dontSendNotification);
+        subtitle.setFont (juce::Font (12.0f, juce::Font::bold));
+        subtitle.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
+        subtitle.setJustificationType (juce::Justification::centredLeft);
+
+        brand.setText ("DEWPOINT AV", juce::dontSendNotification);
+        brand.setFont (juce::Font (12.0f, juce::Font::bold));
+        brand.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
+        brand.setJustificationType (juce::Justification::centredRight);
+
+        mainVis   = std::make_unique<MainVisualizer> (processor);
+        audioLane = std::make_unique<LanePanel> (processor, 0);
+        midiLane  = std::make_unique<LanePanel> (processor, 1);
+
+        triggerPanel = std::make_unique<Panel> ("TRIGGER");
+        triggerKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "threshold", "THRESHOLD", pctText));
+        triggerKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "audioTime", "AUDIO TIME", secText));
+        triggerKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "midiTime", "MIDI TIME", secText));
+
+        bandsPanel = std::make_unique<Panel> ("DUCK BANDS");
+        bandKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "lowDepth", "LOW", pctText));
+        bandKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "midDepth", "MID", pctText));
+        bandKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "highDepth", "HIGH", pctText));
+
+        globalPanel = std::make_unique<Panel> ("GLOBAL");
+        globalKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "depth", "DEPTH", pctText));
+        globalKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "lookahead", "LOOKAHEAD", msText));
+        globalKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "mix", "MIX", pctText));
+        globalKnobs.push_back (std::make_unique<Knob> (processor.getParameters(), "output", "OUTPUT", gainText));
+    }
+
+    void attachTo (juce::Component& root)
+    {
+        root.addAndMakeVisible (title);
+        root.addAndMakeVisible (subtitle);
+        root.addAndMakeVisible (brand);
+
+        root.addAndMakeVisible (*mainVis);
+        root.addAndMakeVisible (*audioLane);
+        root.addAndMakeVisible (*midiLane);
+
+        root.addAndMakeVisible (*triggerPanel);
+        for (auto& k : triggerKnobs) triggerPanel->addAndMakeVisible (*k);
+
+        root.addAndMakeVisible (*bandsPanel);
+        for (auto& k : bandKnobs) bandsPanel->addAndMakeVisible (*k);
+
+        root.addAndMakeVisible (*globalPanel);
+        for (auto& k : globalKnobs) globalPanel->addAndMakeVisible (*k);
+    }
+
+    void resized (juce::Rectangle<int> area)
+    {
+        auto b = area;
+
+        auto header = b.removeFromTop (42);
+        title.setBounds (header.removeFromLeft (280));
+        brand.setBounds (header.removeFromRight (220));
+        subtitle.setBounds (header);
+
+        b.removeFromTop (6);
+        mainVis->setBounds (b.removeFromTop (180));
+        b.removeFromTop (10);
+
+        // Two lane panels side by side.
+        auto lanes = b.removeFromTop (170);
+        const int gap = 12;
+        audioLane->setBounds (lanes.removeFromLeft ((lanes.getWidth() - gap) / 2));
+        lanes.removeFromLeft (gap);
+        midiLane->setBounds (lanes);
+
+        b.removeFromTop (10);
+
+        // Three knob panels across the bottom.
+        const int panelW = (b.getWidth() - 2 * gap) / 3;
+        triggerPanel->setBounds (b.removeFromLeft (panelW));
+        b.removeFromLeft (gap);
+        bandsPanel->setBounds (b.removeFromLeft (panelW));
+        b.removeFromLeft (gap);
+        globalPanel->setBounds (b);
+
+        auto tb = triggerPanel->getLocalBounds().reduced (12);
+        tb.removeFromTop (30);
+        layoutKnobs (triggerKnobs, 3, tb, 8, 0);
+
+        auto bb = bandsPanel->getLocalBounds().reduced (12);
+        bb.removeFromTop (30);
+        layoutKnobs (bandKnobs, 3, bb, 8, 0);
+
+        auto gb = globalPanel->getLocalBounds().reduced (12);
+        gb.removeFromTop (30);
+        layoutKnobs (globalKnobs, 4, gb, 6, 0);
+    }
+};
+
+// ===========================================================================
+SubsideAudioProcessorEditor::SubsideAudioProcessorEditor (SubsideAudioProcessor& p)
+    : AudioProcessorEditor (&p)
+    , processor (p)
+{
+    setLookAndFeel (&lookAndFeel);
+
+    impl = std::make_unique<Impl> (processor);
+    impl->attachTo (*this);
+
+    setResizable (true, true);
+    setResizeLimits (720, 520, 1500, 1000);
+    setSize (940, 660);
+}
+
+SubsideAudioProcessorEditor::~SubsideAudioProcessorEditor()
+{
+    setLookAndFeel (nullptr);
+}
+
+void SubsideAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    g.fillAll (SympathyLookAndFeel::background);
+}
+
+void SubsideAudioProcessorEditor::resized()
+{
+    impl->resized (getLocalBounds().reduced (16));
+}
