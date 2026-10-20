@@ -50,13 +50,13 @@ so no network is needed at build time.
 
 - **Windows**: `build.bat` (needs CMake + Visual Studio 2022), then
   `installer\build_installer.bat` for the Inno Setup `.exe`.
-- **macOS**: `./build_mac.sh` then `./make_dmg.sh` (needs Xcode CLT + CMake).
+- **macOS**: `./build_mac.sh` then `./make_pkg.sh` (needs Xcode CLT + CMake).
 
 ## Continuous integration
 
 `.github/workflows/build-macos.yml` builds the macOS universal2 VST3 + AU + CLAP
 bundles on every push to `main`, every tag, and on demand, uploading the bundles
-and a ready-to-use `.dmg`.
+and a ready-to-use `.pkg`.
 
 ## License
 

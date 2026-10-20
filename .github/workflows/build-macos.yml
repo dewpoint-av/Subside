@@ -34,13 +34,15 @@ jobs:
           cp -R build/Subside_artefacts/Release/AU/Subside.component   dist/
           cp -R build/Subside_artefacts/Release/CLAP/Subside.clap      dist/
 
-      - name: Create disk image
+      - name: Create installer package (.pkg)
         run: |
-          mkdir -p dmg
-          cp -R dist/. dmg/
-          ln -s /Library/Audio/Plug-Ins "dmg/Audio Plug-Ins"
-          printf 'Subside - Sidechain Ducker\n\nDrag each bundle into the matching folder inside "Audio Plug-Ins":\n\n    Subside.vst3        ->  VST3/\n    Subside.component   ->  Components/\n    Subside.clap        ->  CLAP/\n' > dmg/README.txt
-          hdiutil create -volname "Subside" -srcfolder dmg -ov -format UDZO Subside-1.0.0-mac.dmg
+          mkdir -p payload/Library/Audio/Plug-Ins/VST3
+          mkdir -p payload/Library/Audio/Plug-Ins/Components
+          mkdir -p payload/Library/Audio/Plug-Ins/CLAP
+          cp -R dist/Subside.vst3      payload/Library/Audio/Plug-Ins/VST3/
+          cp -R dist/Subside.component payload/Library/Audio/Plug-Ins/Components/
+          cp -R dist/Subside.clap      payload/Library/Audio/Plug-Ins/CLAP/
+          pkgbuild --root payload --identifier com.dewpoint.Subside --version 1.0.0 --install-location / Subside-1.0.0-mac.pkg
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -48,4 +50,4 @@ jobs:
           name: Subside-macOS
           path: |
             dist/**
-            Subside-1.0.0-mac.dmg
+            Subside-1.0.0-mac.pkg

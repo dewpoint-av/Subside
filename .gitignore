@@ -1,9 +1,10 @@
-# Sympathy build & packaging outputs (never commit artifacts)
+# Subside build & packaging outputs (never commit artifacts)
 /build/
 /dist/
 /installer/output/
 build_release.log
 *.dmg
+*.pkg
 *.clap
 *.vst3
 *.component
