@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(Subside VERSION 1.0.2)
+project(Subside VERSION 1.0.3)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,6 +40,12 @@ clap_juce_extensions_plugin(TARGET Subside
 
 juce_generate_juce_header(Subside)
 
+# Embedded Monument Extended logotype fonts.
+juce_add_binary_data(SubsideBinaryData
+    SOURCES
+        Source/MonumentExtendedUltrabold.otf
+        Source/MonumentExtendedRegular.otf)
+
 # ---- Source files ----------------------------------------------------------
 target_sources(Subside
     PRIVATE
@@ -64,6 +70,7 @@ target_compile_definitions(Subside
 # ---- Link JUCE modules -----------------------------------------------------
 target_link_libraries(Subside
     PRIVATE
+        SubsideBinaryData
         juce::juce_audio_utils
         juce::juce_audio_devices
         juce::juce_audio_formats

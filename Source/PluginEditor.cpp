@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 
 #include "DuckVisualizer.h"
+#include "HoloLogo.h"
 
 #include <cmath>
 #include <functional>
@@ -125,9 +126,10 @@ public:
 
     SubsideAudioProcessor& processor;
 
-    juce::Label title;
+    std::unique_ptr<HoloTitle> title;
     juce::Label subtitle;
     juce::Label brand;
+    juce::Label footer;
 
     std::unique_ptr<MainVisualizer> mainVis;
     std::unique_ptr<LanePanel> audioLane;
@@ -143,10 +145,7 @@ public:
 
     void build()
     {
-        title.setText ("SUBSIDE", juce::dontSendNotification);
-        title.setFont (juce::Font (30.0f, juce::Font::bold));
-        title.setColour (juce::Label::textColourId, SympathyLookAndFeel::accent);
-        title.setJustificationType (juce::Justification::centredLeft);
+        title = std::make_unique<HoloTitle> ("SUBSIDE", 32.0f, true);
 
         subtitle.setText ("SIDECHAIN DUCKER", juce::dontSendNotification);
         subtitle.setFont (juce::Font (12.0f, juce::Font::bold));
@@ -154,9 +153,14 @@ public:
         subtitle.setJustificationType (juce::Justification::centredLeft);
 
         brand.setText ("DEWPOINT AV", juce::dontSendNotification);
-        brand.setFont (juce::Font (12.0f, juce::Font::bold));
-        brand.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
+        brand.setFont (monumentFont (13.0f, false));
+        brand.setColour (juce::Label::textColourId, SympathyLookAndFeel::accent);
         brand.setJustificationType (juce::Justification::centredRight);
+
+        footer.setText ("DEWPOINT AV", juce::dontSendNotification);
+        footer.setFont (monumentFont (11.0f, false));
+        footer.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
+        footer.setJustificationType (juce::Justification::centred);
 
         mainVis   = std::make_unique<MainVisualizer> (processor);
         audioLane = std::make_unique<LanePanel> (processor, 0);
@@ -181,9 +185,10 @@ public:
 
     void attachTo (juce::Component& root)
     {
-        root.addAndMakeVisible (title);
+        root.addAndMakeVisible (*title);
         root.addAndMakeVisible (subtitle);
         root.addAndMakeVisible (brand);
+        root.addAndMakeVisible (footer);
 
         root.addAndMakeVisible (*mainVis);
         root.addAndMakeVisible (*audioLane);
@@ -203,8 +208,12 @@ public:
     {
         auto b = area;
 
-        auto header = b.removeFromTop (42);
-        title.setBounds (header.removeFromLeft (280));
+        // Footer strip.
+        footer.setBounds (b.removeFromBottom (18));
+        b.removeFromBottom (2);
+
+        auto header = b.removeFromTop (46);
+        title->setBounds (header.removeFromLeft (340));
         brand.setBounds (header.removeFromRight (220));
         subtitle.setBounds (header);
 
