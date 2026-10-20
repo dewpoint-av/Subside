@@ -42,7 +42,7 @@ jobs:
           cp -R dist/Subside.vst3      payload/Library/Audio/Plug-Ins/VST3/
           cp -R dist/Subside.component payload/Library/Audio/Plug-Ins/Components/
           cp -R dist/Subside.clap      payload/Library/Audio/Plug-Ins/CLAP/
-          pkgbuild --root payload --identifier com.dewpoint.Subside --version 1.0.1 --install-location / Subside-1.0.1-mac.pkg
+          pkgbuild --root payload --identifier com.dewpoint.Subside --version 1.0.2 --install-location / Subside-1.0.2-mac.pkg
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -50,4 +50,4 @@ jobs:
           name: Subside-macOS
           path: |
             dist/**
-            Subside-1.0.1-mac.pkg
+            Subside-1.0.2-mac.pkg
