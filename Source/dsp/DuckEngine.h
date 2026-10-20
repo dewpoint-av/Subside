@@ -44,6 +44,20 @@ namespace subside
         float lookahead  = 0.005f;  // s     latency / click-free attack
         float mix        = 1.00f;   // 0..1  dry/wet
         float output     = 1.00f;   // 0..2
+
+        bool operator== (const Params& o) const
+        {
+            return threshold  == o.threshold
+                && audioTime  == o.audioTime
+                && midiTime   == o.midiTime
+                && depth      == o.depth
+                && lowDepth   == o.lowDepth
+                && midDepth   == o.midDepth
+                && highDepth  == o.highDepth
+                && lookahead  == o.lookahead
+                && mix        == o.mix
+                && output     == o.output;
+        }
     };
 
     // A one-pole envelope follower.

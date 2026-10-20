@@ -199,6 +199,8 @@ namespace subside
 
     void DuckEngine::setParams (const Params& pp)
     {
+        if (pp == p)
+            return;   // nothing changed -> skip re-computing crossovers/curve timing
         p = pp;
         updateCoeffs (fs);
     }
@@ -267,6 +269,8 @@ namespace subside
                               float* outL, float* outR,
                               bool midiTrigger, int numSamples)
     {
+        float lastScEnv = 0.0f, lastDuck = 0.0f, lastAd = 0.0f, lastMd = 0.0f;
+
         for (int i = 0; i < numSamples; ++i)
         {
             const float il = inL[i];
@@ -280,7 +284,7 @@ namespace subside
                 sc = std::fabs (scL[i]);
 
             const float scEnv = follower.process (sc);
-            sidechainLevel.store (scEnv);
+            lastScEnv = scEnv;
 
             // Audio lane: rising edge of the envelope crossing the threshold.
             const bool above = scEnv > p.threshold;
@@ -294,9 +298,9 @@ namespace subside
             const float md = lane[1].process (midiTrig);
             const float duck = std::max (ad, md);
 
-            duckAmount.store (duck);
-            audioDuck.store (ad);
-            midiDuck.store (md);
+            lastDuck = duck;
+            lastAd = ad;
+            lastMd = md;
 
             // Main path: lookahead -> 3-band split -> per-band duck -> sum.
             const float xl = lookahead[0].process (il);
@@ -323,6 +327,12 @@ namespace subside
             vizDuckBuf[static_cast<size_t> (w)] = duck;
             vizWrite.store ((w + 1) % kVizSize);
         }
+
+        // Publish the live values once per block (the UI polls at ~60 Hz).
+        duckAmount.store (lastDuck);
+        audioDuck.store (lastAd);
+        midiDuck.store (lastMd);
+        sidechainLevel.store (lastScEnv);
     }
 
 } // namespace subside
