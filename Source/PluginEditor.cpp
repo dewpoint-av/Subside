@@ -2,6 +2,7 @@
 
 #include "DuckVisualizer.h"
 #include "HoloLogo.h"
+#include "AudioSpheres.h"
 
 #include <cmath>
 #include <functional>
@@ -147,6 +148,8 @@ public:
     juce::Label footer;
 
     std::unique_ptr<MainVisualizer> mainVis;
+    std::unique_ptr<SpectrogramSphere> leftSphere;
+    std::unique_ptr<SpectrumSphere> rightSphere;
     std::unique_ptr<LanePanel> audioLane;
     std::unique_ptr<LanePanel> midiLane;
 
@@ -178,6 +181,13 @@ public:
         footer.setJustificationType (juce::Justification::centred);
 
         mainVis   = std::make_unique<MainVisualizer> (processor);
+
+        leftSphere = std::make_unique<SpectrogramSphere> (
+            &processor.getEngine().vizMain(),
+            [this] { return processor.getEngine().vizWritePos(); });
+        rightSphere = std::make_unique<SpectrumSphere> (
+            &processor.getEngine().vizMain(),
+            [this] { return processor.getEngine().vizWritePos(); });
         audioLane = std::make_unique<LanePanel> (processor, 0);
         midiLane  = std::make_unique<LanePanel> (processor, 1);
 
@@ -204,6 +214,8 @@ public:
         root.addAndMakeVisible (subtitle);
         root.addAndMakeVisible (brand);
         root.addAndMakeVisible (footer);
+        root.addAndMakeVisible (*leftSphere);
+        root.addAndMakeVisible (*rightSphere);
 
         root.addAndMakeVisible (*mainVis);
         root.addAndMakeVisible (*audioLane);
@@ -228,6 +240,13 @@ public:
         b.removeFromBottom (2);
 
         auto header = b.removeFromTop (92);
+        const int sphere = 76;
+        const int pad = 28;
+        const int sphereY = header.getY() + (header.getHeight() - sphere) / 2;
+        leftSphere->setBounds  (header.getX() + pad, sphereY, sphere, sphere);
+        rightSphere->setBounds (header.getRight() - pad - sphere, sphereY, sphere, sphere);
+
+        header = header.withTrimmedLeft (sphere + pad).withTrimmedRight (sphere + pad);
         brand.setBounds (header.removeFromTop (20));
         title->setBounds (header.removeFromTop (54));
         subtitle.setBounds (header);
