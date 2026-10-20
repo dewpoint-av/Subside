@@ -279,7 +279,10 @@ void MainVisualizer::timerCallback()
 
 void MainVisualizer::update()
 {
-    const int target = juce::roundToInt (kMaxParticles * (0.15f + 0.85f * duck));
+    // Opposite behaviour: particles roam freely while idle, and settle once
+    // ducking kicks in.
+    const float activity = 1.0f - duck;   // 1 = idle, 0 = full duck
+    const int target = juce::roundToInt (kMaxParticles * (0.15f + 0.85f * activity));
     while (static_cast<int> (particles.size()) < target)
         spawnParticle();
 
@@ -288,8 +291,9 @@ void MainVisualizer::update()
         pt.life -= 1.0f / 60.0f;
         pt.x += pt.vx;
         pt.y += pt.vy;
-        pt.vx *= 0.98f;
-        pt.vy *= 0.98f;
+        const float drag = 0.88f + 0.10f * activity;   // 0.98 idle, 0.88 ducking
+        pt.vx *= drag;
+        pt.vy *= drag;
     }
 
     particles.erase (std::remove_if (particles.begin(), particles.end(),
@@ -301,10 +305,13 @@ void MainVisualizer::spawnParticle()
 {
     const auto b = getLocalBounds().toFloat();
     Particle pt;
+    // Spawn anywhere in the plot and drift in a random direction.
     pt.x = b.getX() + nextRandom() * b.getWidth();
-    pt.y = b.getBottom() - 2.0f;
-    pt.vx = (nextRandom() - 0.5f) * 1.5f;
-    pt.vy = -(0.4f + nextRandom() * 1.4f) * duck;
+    pt.y = b.getY() + nextRandom() * b.getHeight();
+    const float angle = nextRandom() * 2.0f * kPi;
+    const float speed = (1.0f - duck) * (0.3f + 1.8f * nextRandom());
+    pt.vx = std::cos (angle) * speed;
+    pt.vy = std::sin (angle) * speed;
     pt.life = 0.6f + nextRandom() * 1.4f;
     pt.maxLife = pt.life;
     pt.size = 1.5f + 3.0f * nextRandom();
