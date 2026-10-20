@@ -14,6 +14,7 @@
   ducked by an independent depth, then recombined.
 */
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -123,6 +124,60 @@ namespace subside
         int delaySamples = 0;
     };
 
+    // A compact lookahead peak limiter (2 ms) with a hard-clip safety net.
+    class StereoLimiter
+    {
+    public:
+        void prepare (double sr)
+        {
+            lookahead = static_cast<int> (sr * 0.002);
+            if (lookahead < 1) lookahead = 1;
+            delayL.assign (static_cast<size_t> (lookahead + 1), 0.0f);
+            delayR.assign (static_cast<size_t> (lookahead + 1), 0.0f);
+            threshold = 0.89f;
+            releaseCoeff = static_cast<float> (1.0 - std::exp (-1.0 / (0.05 * sr)));
+            reset();
+        }
+
+        void reset()
+        {
+            std::fill (delayL.begin(), delayL.end(), 0.0f);
+            std::fill (delayR.begin(), delayR.end(), 0.0f);
+            writePos = 0;
+            gain = 1.0f;
+            peak = 0.0f;
+        }
+
+        void process (float& l, float& r)
+        {
+            delayL[static_cast<size_t> (writePos)] = l;
+            delayR[static_cast<size_t> (writePos)] = r;
+
+            const float a = std::max (std::fabs (l), std::fabs (r));
+            if (a > peak)      peak = a;
+            else               peak += releaseCoeff * (a - peak);
+
+            const float target = (peak > threshold) ? threshold / peak : 1.0f;
+            if (target < gain) gain = target;
+            else               gain += releaseCoeff * (target - gain);
+
+            const int rd = (writePos + 1) % (lookahead + 1);
+            l = std::clamp (delayL[static_cast<size_t> (rd)] * gain, -1.0f, 1.0f);
+            r = std::clamp (delayR[static_cast<size_t> (rd)] * gain, -1.0f, 1.0f);
+            writePos = rd;
+        }
+
+    private:
+        int lookahead = 96;
+        std::vector<float> delayL;
+        std::vector<float> delayR;
+        int writePos = 0;
+        float gain = 1.0f;
+        float peak = 0.0f;
+        float threshold = 0.89f;
+        float releaseCoeff = 0.0f;
+    };
+
     class DuckEngine
     {
     public:
@@ -161,6 +216,7 @@ namespace subside
         Biquad lp[2];
         Biquad hp[2];
         LookaheadDelay lookahead[2];
+        StereoLimiter limiter;
 
         std::array<float, kCurveLutSize> lut[kNumLanes];
         std::array<std::vector<CurvePoint>, kNumLanes> curvePoints;

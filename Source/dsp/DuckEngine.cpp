@@ -166,6 +166,7 @@ namespace subside
         for (auto& f : lp) f.reset();
         for (auto& f : hp) f.reset();
         for (auto& d : lookahead) d.prepare (fs, 0.1f);
+        limiter.prepare (fs);
 
         vizMainBuf.assign (kVizSize, 0.0f);
         vizSideBuf.assign (kVizSize, 0.0f);
@@ -188,6 +189,7 @@ namespace subside
         for (auto& f : lp) f.reset();
         for (auto& f : hp) f.reset();
         for (auto& d : lookahead) d.reset();
+        limiter.reset();
 
         audioWasAbove = false;
         duckAmount.store (0.0f);
@@ -311,14 +313,17 @@ namespace subside
             const float midL  = xl - lowL - highL;
             const float wetL  = xl - duck * p.depth
                                      * (lowL * p.lowDepth + midL * p.midDepth + highL * p.highDepth);
-            outL[i] = ((1.0f - p.mix) * xl + p.mix * wetL) * p.output;
+            float lo = ((1.0f - p.mix) * xl + p.mix * wetL) * p.output;
 
             const float lowR  = lp[1].process (xr);
             const float highR = hp[1].process (xr);
             const float midR  = xr - lowR - highR;
             const float wetR  = xr - duck * p.depth
                                      * (lowR * p.lowDepth + midR * p.midDepth + highR * p.highDepth);
-            outR[i] = ((1.0f - p.mix) * xr + p.mix * wetR) * p.output;
+            float ro = ((1.0f - p.mix) * xr + p.mix * wetR) * p.output;
+            limiter.process (lo, ro);
+            outL[i] = lo;
+            outR[i] = ro;
 
             // Visualisation ring buffers.
             int w = vizWrite.load();
