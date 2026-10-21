@@ -16,7 +16,8 @@ namespace
 
     // ---- a labelled rotary knob bound to a parameter -----------------------
     class Knob : public juce::Component,
-                 private juce::AudioProcessorValueTreeState::Listener
+                 private juce::AudioProcessorValueTreeState::Listener,
+                 private juce::AsyncUpdater
     {
     public:
         Knob (juce::AudioProcessorValueTreeState& state,
@@ -52,7 +53,12 @@ namespace
 
         ~Knob() override { stateRef.removeParameterListener (param, this); }
 
-        void parameterChanged (const juce::String&, float) override { refreshLabel(); }
+        // parameterChanged can fire on the audio thread (host automation) or at
+        // mouse-move rate during a drag — marshal + coalesce the label update to
+        // the message thread so we never touch the Label off-thread.
+        void parameterChanged (const juce::String&, float) override { triggerAsyncUpdate(); }
+
+        void handleAsyncUpdate() override { refreshLabel(); }
 
         void resized() override
         {
