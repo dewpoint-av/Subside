@@ -1,7 +1,7 @@
 ; Subside — Inno Setup installer
 
 #define MyAppName "Subside"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.1.2"
 #define MyAppPublisher "Dewpoint AV"
 #define MyAppURL "https://dewpoint.live"
 
