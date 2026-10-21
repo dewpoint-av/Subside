@@ -38,7 +38,7 @@ namespace
 LanePanel::LanePanel (SubsideAudioProcessor& p, int laneIndex)
     : proc (p), lane (laneIndex)
 {
-    startTimerHz (60);
+    startTimerHz (30);
 
     drawButton.setColour (juce::ToggleButton::textColourId, SympathyLookAndFeel::muted);
     drawButton.setColour (juce::ToggleButton::tickColourId, SympathyLookAndFeel::accent);
@@ -253,7 +253,7 @@ void LanePanel::resetCurveToDefault()
 MainVisualizer::MainVisualizer (SubsideAudioProcessor& p)
     : proc (p)
 {
-    startTimerHz (60);
+    startTimerHz (30);
 }
 
 MainVisualizer::~MainVisualizer()

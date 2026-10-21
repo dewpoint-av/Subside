@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.1.2"
+VERSION="1.1.3"
 PAYLOAD="build/pkg-payload"
 OUT="installer/output/Subside-${VERSION}-mac.pkg"
 
