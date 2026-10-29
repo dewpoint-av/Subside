@@ -1,4 +1,4 @@
-#include "DuckVisualizer.h"
+﻿#include "DuckVisualizer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -83,13 +83,13 @@ void LanePanel::paint (juce::Graphics& g)
 
     // Header
     auto header = plot.removeFromTop (16.0f);
-    g.setFont (juce::Font (12.0f, juce::Font::bold));
+    g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
     g.setColour (accent);
     g.drawText (isAudio ? "AUDIO TRIGGER" : "MIDI TRIGGER",
                 header.removeFromLeft (120), juce::Justification::centredLeft, false);
-    g.setFont (juce::Font (10.0f, juce::Font::plain));
+    g.setFont (juce::FontOptions (10.0f, juce::Font::plain));
     g.setColour (SympathyLookAndFeel::muted);
-    g.drawText ("drag to reshape  ·  double-click to reset",
+    g.drawText ("drag to reshape  Â·  double-click to reset",
                 header.withTrimmedRight (62.0f), juce::Justification::centredRight, false);
 
     // Input waveform (audio lane only).
@@ -333,10 +333,10 @@ void MainVisualizer::paint (juce::Graphics& g)
 
     // Header
     auto header = plot.removeFromTop (16.0f);
-    g.setFont (juce::Font (12.0f, juce::Font::bold));
+    g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
     g.setColour (SympathyLookAndFeel::accent);
     g.drawText ("MAIN SIGNAL", header.removeFromLeft (120), juce::Justification::centredLeft, false);
-    g.setFont (juce::Font (10.0f, juce::Font::plain));
+    g.setFont (juce::FontOptions (10.0f, juce::Font::plain));
     g.setColour (SympathyLookAndFeel::muted);
     g.drawText ("input waveform  +  duck amount", header, juce::Justification::centredRight, false);
 

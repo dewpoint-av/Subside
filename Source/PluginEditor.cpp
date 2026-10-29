@@ -23,8 +23,8 @@ namespace
         Knob (juce::AudioProcessorValueTreeState& state,
               const juce::String& paramId,
               const juce::String& name,
-              std::function<juce::String (float)> textFn)
-            : stateRef (state), param (paramId), textFn (textFn)
+              std::function<juce::String (float)> textFnIn)
+            : stateRef (state), param (paramId), textFn (textFnIn)
         {
             slider.setSliderStyle (juce::Slider::Rotary);
             slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -34,12 +34,12 @@ namespace
             addAndMakeVisible (slider);
 
             nameLabel.setText (name, juce::dontSendNotification);
-            nameLabel.setFont (juce::Font (11.0f, juce::Font::plain));
+            nameLabel.setFont (juce::FontOptions (11.0f, juce::Font::plain));
             nameLabel.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
             nameLabel.setJustificationType (juce::Justification::centred);
             addAndMakeVisible (nameLabel);
 
-            valueLabel.setFont (juce::Font (11.0f, juce::Font::bold));
+            valueLabel.setFont (juce::FontOptions (11.0f, juce::Font::bold));
             valueLabel.setColour (juce::Label::textColourId, SympathyLookAndFeel::text);
             valueLabel.setJustificationType (juce::Justification::centred);
             addAndMakeVisible (valueLabel);
@@ -54,7 +54,7 @@ namespace
         ~Knob() override { stateRef.removeParameterListener (param, this); }
 
         // parameterChanged can fire on the audio thread (host automation) or at
-        // mouse-move rate during a drag — marshal + coalesce the label update to
+        // mouse-move rate during a drag â€” marshal + coalesce the label update to
         // the message thread so we never touch the Label off-thread.
         void parameterChanged (const juce::String&, float) override { triggerAsyncUpdate(); }
 
@@ -93,7 +93,7 @@ namespace
         explicit Panel (const juce::String& title)
         {
             titleLabel.setText (title, juce::dontSendNotification);
-            titleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
+            titleLabel.setFont (juce::FontOptions (13.0f, juce::Font::bold));
             titleLabel.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
             titleLabel.setJustificationType (juce::Justification::centred);
             addAndMakeVisible (titleLabel);
@@ -172,7 +172,7 @@ public:
         title = std::make_unique<HoloTitle> ("SUBSIDE", 42.0f, true);
 
         subtitle.setText ("SIDECHAIN DUCKER", juce::dontSendNotification);
-        subtitle.setFont (juce::Font (12.0f, juce::Font::bold));
+        subtitle.setFont (juce::FontOptions (12.0f, juce::Font::bold));
         subtitle.setColour (juce::Label::textColourId, SympathyLookAndFeel::muted);
         subtitle.setJustificationType (juce::Justification::centred);
 
@@ -295,11 +295,10 @@ public:
 // ===========================================================================
 SubsideAudioProcessorEditor::SubsideAudioProcessorEditor (SubsideAudioProcessor& p)
     : AudioProcessorEditor (&p)
-    , processor (p)
 {
     setLookAndFeel (&lookAndFeel);
 
-    impl = std::make_unique<Impl> (processor);
+    impl = std::make_unique<Impl> (p);
     impl->attachTo (*this);
 
     setResizable (true, true);

@@ -5,12 +5,12 @@ namespace
 {
     std::vector<subside::CurvePoint> defaultAudioCurve()
     {
-        return { { 0.0f, 0.0f }, { 0.06f, 1.0f }, { 0.30f, 0.85f }, { 1.0f, 0.0f } };
+        return { { 0.0f, 0.0f }, { 0.015f, 1.0f }, { 0.12f, 0.60f }, { 0.40f, 0.0f }, { 1.0f, 0.0f } };
     }
 
     std::vector<subside::CurvePoint> defaultMidiCurve()
     {
-        return { { 0.0f, 0.0f }, { 0.12f, 1.0f }, { 0.50f, 0.80f }, { 1.0f, 0.0f } };
+        return { { 0.0f, 0.0f }, { 0.03f, 1.0f }, { 0.18f, 0.55f }, { 0.50f, 0.0f }, { 1.0f, 0.0f } };
     }
 
     juce::String curveToString (const std::vector<subside::CurvePoint>& pts)
@@ -58,7 +58,7 @@ SubsideAudioProcessor::SubsideAudioProcessor()
             std::make_unique<juce::AudioParameterFloat> ("highDepth", "High",
                 0.0f, 1.0f, 0.60f),
             std::make_unique<juce::AudioParameterFloat> ("lookahead", "Lookahead",
-                0.0f, 0.02f, 0.005f),
+                juce::NormalisableRange<float> (0.0f, 0.02f, 0.001f), 0.005f),
             std::make_unique<juce::AudioParameterFloat> ("mix", "Mix",
                 0.0f, 1.0f, 1.0f),
             std::make_unique<juce::AudioParameterFloat> ("output", "Output",
