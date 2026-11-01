@@ -38,6 +38,7 @@ namespace
 LanePanel::LanePanel (SubsideAudioProcessor& p, int laneIndex)
     : proc (p), lane (laneIndex)
 {
+    setOpaque (true);
     startTimerHz (30);
 
     drawButton.setColour (juce::ToggleButton::textColourId, SympathyLookAndFeel::muted);
@@ -65,6 +66,11 @@ void LanePanel::timerCallback()
 
 void LanePanel::paint (juce::Graphics& g)
 {
+    {
+        auto wbg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId);
+        g.fillAll (wbg.isTransparent() ? juce::Colour (0xff0a0c10) : wbg);
+    }
+
     const auto b = getLocalBounds().toFloat();
 
     g.setColour (SympathyLookAndFeel::panel);
@@ -253,6 +259,7 @@ void LanePanel::resetCurveToDefault()
 MainVisualizer::MainVisualizer (SubsideAudioProcessor& p)
     : proc (p)
 {
+    setOpaque (true);
     startTimerHz (30);
 }
 
@@ -321,6 +328,11 @@ void MainVisualizer::spawnParticle()
 
 void MainVisualizer::paint (juce::Graphics& g)
 {
+    {
+        auto wbg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId);
+        g.fillAll (wbg.isTransparent() ? juce::Colour (0xff0a0c10) : wbg);
+    }
+
     const auto b = getLocalBounds().toFloat();
 
     g.setColour (SympathyLookAndFeel::panel);

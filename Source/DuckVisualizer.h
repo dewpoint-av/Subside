@@ -67,7 +67,7 @@ private:
     float time = 0.0f;
     float duck = 0.0f;
 
-    static constexpr int kMaxParticles = 220;
+    static constexpr int kMaxParticles = 100;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainVisualizer)
 };
