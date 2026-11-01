@@ -173,10 +173,8 @@ namespace subside
         vizDuckBuf.assign (kVizSize, 0.0f);
         vizWrite.store (0);
 
-        // Sensible default curves (fast attack -> hold -> release).
-        setCurve (0, { { 0.0f, 0.0f }, { 0.06f, 1.0f }, { 0.30f, 0.85f }, { 1.0f, 0.0f } });
-        setCurve (1, { { 0.0f, 0.0f }, { 0.12f, 1.0f }, { 0.50f, 0.80f }, { 1.0f, 0.0f } });
-
+        // Curves are not touched here: the processor owns them, and hosts restore saved
+        // state before calling prepare (and may re-prepare at any time).
         updateCoeffs (fs);
         reset();
     }
